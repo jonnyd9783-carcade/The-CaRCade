@@ -3,6 +3,7 @@ import sys
 from render.view import View
 from vehicle.state import VehicleState
 from input.controller import Controller
+from input.mapping import map_controller_input
 
 pygame.init()
 pygame.display.set_mode((800, 600))
@@ -21,14 +22,13 @@ while running:
             running = False
 
     raw = controller.read_raw()
-    steering = raw["axis_0"]
-    throttle = raw["axis_1"]
+    command = map_controller_input(raw)
 
-    vehicle.apply_input(steering, throttle)
+    vehicle.apply_input(command.steering, command.throttle)
 
     view.draw(vehicle)
 
-    clock.tick(60)  # cap and stabilize the loop at 60 frames per second
+    clock.tick(60)
 
 pygame.quit()
 sys.exit()
