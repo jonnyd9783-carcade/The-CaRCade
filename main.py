@@ -46,6 +46,10 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+    if hasattr(input_source, "calibrate") and hasattr(input_source, "joystick"):
+        if input_source.joystick.get_button(8):
+            input_source.calibrate()
+            
     raw = input_source.read_raw()
     command = map_input(raw)
 
