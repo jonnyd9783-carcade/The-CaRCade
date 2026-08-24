@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 @dataclass
 class VehicleState:
@@ -8,7 +9,7 @@ class VehicleState:
     current_steering: float = 0.0
     current_throttle: float = 0.0
 
-    def apply_input(self, steering: float, throttle: float, speed: float = 2.5, deadzone: float = 0.08, ramp_rate: float = 0.15):
+    def apply_input(self, steering, throttle, speed=2.5, deadzone=0.08, ramp_rate=0.15, turn_rate=3.0):
         if abs(steering) < deadzone:
             steering = 0.0
         if abs(throttle) < deadzone:
@@ -22,5 +23,8 @@ class VehicleState:
         s = (s ** 2) * (1 if s >= 0 else -1)
         t = (t ** 2) * (1 if t >= 0 else -1)
 
-        self.x += s * speed
-        self.y += t * speed
+        self.heading += s * turn_rate
+
+        heading_rad = math.radians(self.heading)
+        self.x -= math.sin(heading_rad) * t * speed
+        self.y += math.cos(heading_rad) * t * speed
