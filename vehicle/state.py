@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import math
 
+PIXELS_PER_FOOT = 20  # placeholder scale factor; refine once real Reflex 14 speed data is available
+
 @dataclass
 class VehicleState:
     x: float = 400.0
@@ -8,6 +10,8 @@ class VehicleState:
     heading: float = 0.0
     current_steering: float = 0.0
     current_throttle: float = 0.0
+    velocity_x: float = 0.0
+    velocity_y: float = 0.0
 
     def apply_input(self, steering, throttle, speed=2.5, steering_deadzone=0.12, throttle_deadzone=0.12, ramp_rate=0.15, turn_rate=3.0):
         if abs(steering) < steering_deadzone:
@@ -26,5 +30,8 @@ class VehicleState:
         self.heading += s * turn_rate
 
         heading_rad = math.radians(self.heading)
-        self.x -= math.sin(heading_rad) * t * speed
-        self.y += math.cos(heading_rad) * t * speed
+        self.velocity_x = -math.sin(heading_rad) * t * speed
+        self.velocity_y = math.cos(heading_rad) * t * speed
+
+        self.x += self.velocity_x
+        self.y += self.velocity_y
