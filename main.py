@@ -7,12 +7,14 @@ from input.controller import Controller
 from input.keyboard_controller import KeyboardController
 from input.mapping import map_controller_input
 from input.mapping import map_keyboard_input
+from telemetry import Telemetry
 
 pygame.init()
 pygame.display.set_mode((800, 600))
 
 view = View()
 vehicle = VehicleState()
+telemetry = Telemetry("telemetry_run.csv")
 
 input_source = None
 map_input = None
@@ -61,9 +63,12 @@ while running:
 
     vehicle.apply_input(command.steering, command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
+    telemetry.record(vehicle, command)
+
     view.draw(vehicle)
 
     clock.tick(60)
 
+telemetry.close()
 pygame.quit()
 sys.exit()
