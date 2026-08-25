@@ -14,7 +14,7 @@ pygame.display.set_mode((800, 600))
 
 view = View()
 vehicle = VehicleState()
-telemetry = Telemetry("telemetry_run.csv")
+telemetry = Telemetry()
 
 input_source = None
 map_input = None
