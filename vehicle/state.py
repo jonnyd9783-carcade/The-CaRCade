@@ -9,10 +9,10 @@ class VehicleState:
     current_steering: float = 0.0
     current_throttle: float = 0.0
 
-    def apply_input(self, steering, throttle, speed=2.5, deadzone=0.08, ramp_rate=0.15, turn_rate=3.0):
-        if abs(steering) < deadzone:
+    def apply_input(self, steering, throttle, speed=2.5, steering_deadzone=0.12, throttle_deadzone=0.12, ramp_rate=0.15, turn_rate=3.0):
+        if abs(steering) < steering_deadzone:
             steering = 0.0
-        if abs(throttle) < deadzone:
+        if abs(throttle) < throttle_deadzone:
             throttle = 0.0
 
         self.current_steering += (steering - self.current_steering) * ramp_rate

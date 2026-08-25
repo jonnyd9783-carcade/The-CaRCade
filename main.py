@@ -16,6 +16,8 @@ vehicle = VehicleState()
 
 input_source = None
 map_input = None
+steering_deadzone = 0.12
+throttle_deadzone = 0.12
 
 start_time = time.time()
 print("Waiting for controller...")
@@ -28,6 +30,8 @@ while time.time() - start_time < 10:
         input_source = Controller()
         input_source.calibrate()
         map_input = map_controller_input
+        steering_deadzone = input_source.deadzone["axis_2"]
+        throttle_deadzone = input_source.deadzone["axis_1"]
         break
     view.draw(vehicle)
     time.sleep(0.2)
@@ -49,11 +53,13 @@ while running:
     if hasattr(input_source, "calibrate") and hasattr(input_source, "joystick"):
         if input_source.joystick.get_button(8):
             input_source.calibrate()
-            
+            steering_deadzone = input_source.deadzone["axis_2"]
+            throttle_deadzone = input_source.deadzone["axis_1"]
+
     raw = input_source.read_raw()
     command = map_input(raw)
 
-    vehicle.apply_input(command.steering, command.throttle)
+    vehicle.apply_input(command.steering, command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
     view.draw(vehicle)
 

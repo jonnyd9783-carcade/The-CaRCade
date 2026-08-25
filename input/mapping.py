@@ -9,7 +9,7 @@ class NormalizedCommand:
 
 def map_controller_input(raw: dict) -> NormalizedCommand:
     result = NormalizedCommand(
-        steering=raw["axis_0"],
+        steering=raw["axis_2"],
         throttle=raw["axis_1"],
     )
     return result
