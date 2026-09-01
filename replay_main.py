@@ -11,6 +11,12 @@ if filepath is None:
     print("Usage: python3 replay_main.py path/to/telemetry_runs/run_....csv")
     sys.exit()
 
+import os
+if not os.path.exists(filepath):
+    print("File not found: " + filepath)
+    print("Check the path and try again.")
+    sys.exit()
+
 pygame.init()
 pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Sim Lab - Replay")
