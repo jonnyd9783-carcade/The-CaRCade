@@ -15,6 +15,7 @@ pygame.display.set_mode((800, 600))
 view = View()
 vehicle = VehicleState()
 telemetry = Telemetry()
+recording_started = False
 
 input_source = None
 map_input = None
@@ -61,9 +62,15 @@ while running:
     raw = input_source.read_raw()
     command = map_input(raw)
 
+    if not recording_started:
+        if abs(command.steering) > steering_deadzone or abs(command.throttle) > throttle_deadzone:
+            recording_started = True
+            print("First input detected, telemetry recording started.")
+
     vehicle.apply_input(command.steering, command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
-    telemetry.record(vehicle, command)
+    if recording_started:
+        telemetry.record(vehicle, command)
 
     view.draw(vehicle)
 
