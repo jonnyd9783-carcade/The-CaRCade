@@ -12,13 +12,21 @@ ACCELERATION = 0.08   # speed gained per frame at full throttle
 FRICTION = 0.02        # fraction of speed lost per frame when coasting
 TOP_SPEED = 4.0        # max magnitude of speed in either direction
 
+# How quickly the velocity vector "catches up" to heading each frame.
+# 1.0 = velocity snaps instantly to heading (old behavior, no momentum).
+# Lower values = more lag/drift — direction of travel visibly trails heading
+# during sharp turns or speed changes. This is what makes the direction-of-
+# travel line meaningfully different from the orientation line.
+MOMENTUM_LAG = 0.15
+
 
 @dataclass
 class VehicleState:
     x: float = 400.0
     y: float = 300.0
     heading: float = 0.0
-    speed: float = 0.0  # NEW: persistent scalar speed, replaces instantaneous throttle-as-velocity
+    direction_of_travel: float = 0.0  # angle of actual velocity vector, degrees
+    speed: float = 0.0
     current_steering: float = 0.0
     current_throttle: float = 0.0
     velocity_x: float = 0.0
@@ -26,7 +34,8 @@ class VehicleState:
 
     def apply_input(self, steering, throttle, steering_deadzone=0.12, throttle_deadzone=0.12,
                      ramp_rate=0.15, turn_rate=3.0,
-                     acceleration=ACCELERATION, friction=FRICTION, top_speed=TOP_SPEED):
+                     acceleration=ACCELERATION, friction=FRICTION, top_speed=TOP_SPEED,
+                     momentum_lag=MOMENTUM_LAG):
         if abs(steering) < steering_deadzone:
             steering = 0.0
         if abs(throttle) < throttle_deadzone:
@@ -42,7 +51,7 @@ class VehicleState:
 
         self.heading += s * turn_rate
 
-        # --- NEW: speed accelerates from throttle, decays from friction ---
+        # --- Speed: accelerates from throttle, decays from friction ---
         self.speed += t * acceleration
         self.speed -= self.speed * friction
 
@@ -51,9 +60,21 @@ class VehicleState:
         elif self.speed < -top_speed:
             self.speed = -top_speed
 
+        # --- Velocity vector has momentum — it chases the heading-derived
+        # target direction rather than snapping to it instantly ---
         heading_rad = math.radians(self.heading)
-        self.velocity_x = -math.sin(heading_rad) * self.speed
-        self.velocity_y = math.cos(heading_rad) * self.speed
+        target_velocity_x = -math.sin(heading_rad) * self.speed
+        target_velocity_y = math.cos(heading_rad) * self.speed
+
+        self.velocity_x += (target_velocity_x - self.velocity_x) * momentum_lag
+        self.velocity_y += (target_velocity_y - self.velocity_y) * momentum_lag
+
+        # --- direction_of_travel reflects where the vehicle is actually
+        # moving, which can now differ from heading ---
+        if self.velocity_x != 0.0 or self.velocity_y != 0.0:
+            self.direction_of_travel = math.degrees(
+                math.atan2(self.velocity_x, -self.velocity_y)
+            )
 
         self.x += self.velocity_x
         self.y += self.velocity_y
