@@ -19,6 +19,18 @@ TOP_SPEED = 4.0        # max magnitude of speed in either direction
 # travel line meaningfully different from the orientation line.
 MOMENTUM_LAG = 0.15
 
+# --- Arena boundary constants (Milestone 4a) ---
+# These MUST currently match render/view.py's SCREEN_WIDTH, SCREEN_HEIGHT,
+# and ARENA_MARGIN by hand — there is no shared config yet. If the arena
+# size ever changes in view.py, these need to be updated here too. This
+# duplication is a known, deliberate simplification; a good candidate for
+# the deferred consolidated config table (section 12a), not worth solving
+# now for a single set of four numbers.
+ARENA_MIN_X = 40
+ARENA_MAX_X = 760
+ARENA_MIN_Y = 40
+ARENA_MAX_Y = 560
+
 
 @dataclass
 class VehicleState:
@@ -78,3 +90,31 @@ class VehicleState:
 
         self.x += self.velocity_x
         self.y += self.velocity_y
+
+        # --- NEW (Milestone 4a): boundary collision ---
+        # Vehicle is treated as a point (center position only) for this
+        # first pass — not yet accounting for the rendered dot's radius.
+        # On any contact, clamp position to the boundary edge and bring
+        # the vehicle to a full stop (speed and both velocity components
+        # zeroed), matching the milestone's own success-criterion wording:
+        # "the vehicle stops or is blocked."
+        hit_wall = False
+
+        if self.x < ARENA_MIN_X:
+            self.x = ARENA_MIN_X
+            hit_wall = True
+        elif self.x > ARENA_MAX_X:
+            self.x = ARENA_MAX_X
+            hit_wall = True
+
+        if self.y < ARENA_MIN_Y:
+            self.y = ARENA_MIN_Y
+            hit_wall = True
+        elif self.y > ARENA_MAX_Y:
+            self.y = ARENA_MAX_Y
+            hit_wall = True
+
+        if hit_wall:
+            self.speed = 0.0
+            self.velocity_x = 0.0
+            self.velocity_y = 0.0
