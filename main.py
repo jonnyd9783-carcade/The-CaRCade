@@ -8,12 +8,14 @@ from input.keyboard_controller import KeyboardController
 from input.mapping import map_controller_input
 from input.mapping import map_keyboard_input
 from telemetry import Telemetry
+from sensors.simulated_position import SimulatedPositionSensor
 
 pygame.init()
 pygame.display.set_mode((800, 600))
 
 view = View()
 vehicle = VehicleState()
+position_sensor = SimulatedPositionSensor(vehicle)
 telemetry = Telemetry()
 recording_started = False
 
@@ -69,10 +71,12 @@ while running:
 
     vehicle.apply_input(command.steering, command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
+    sensor_reading = position_sensor.read()
+
     if recording_started:
         telemetry.record(vehicle, command)
 
-    view.draw(vehicle)
+    view.draw(vehicle, sensor_reading)
 
     clock.tick(60)
 
