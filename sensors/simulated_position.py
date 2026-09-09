@@ -16,9 +16,11 @@ import random
 from dataclasses import dataclass
 
 # Standard deviation of simulated position noise, in the same pixel units
-# as VehicleState.x/y. Arbitrary starting guess, not yet tuned — adjust
-# and re-run to feel out how much jitter looks/feels right.
-POSITION_NOISE_STDDEV = 3.0
+# as VehicleState.x/y. ~15cm, a mid-range estimate for real deployed UWB
+# accuracy (commonly cited 10-30cm range: ~10cm ideal lab conditions,
+# closer to 30cm in harder real-world deployments). Not yet tied to a
+# specific chosen UWB vendor/module — revisit once hardware is selected.
+POSITION_NOISE_STDDEV = 12
 
 
 @dataclass

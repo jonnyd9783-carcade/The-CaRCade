@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 import math
 
-PIXELS_PER_FOOT = 20  # placeholder scale factor; refine once real Reflex 14 speed data is available
+PIXELS_PER_FOOT = 28.8  # calibrated: 720px usable arena width = 25ft real-world width
+REFLEX_14_LENGTH_INCHES = 11.97  # real vehicle length, per Team Associated spec (304mm)
+REFLEX_14_WIDTH_INCHES = 7.95  # real vehicle width, per Team Associated spec (202mm)
 
 # --- Physics tuning constants (Milestone 4) ---
 # Per-frame constants, tuned assuming a fixed 60fps tick (matches the rest
@@ -63,7 +65,6 @@ class VehicleState:
 
         self.heading += s * turn_rate
 
-        # --- Speed: accelerates from throttle, decays from friction ---
         self.speed += t * acceleration
         self.speed -= self.speed * friction
 
@@ -72,8 +73,6 @@ class VehicleState:
         elif self.speed < -top_speed:
             self.speed = -top_speed
 
-        # --- Velocity vector has momentum — it chases the heading-derived
-        # target direction rather than snapping to it instantly ---
         heading_rad = math.radians(self.heading)
         target_velocity_x = -math.sin(heading_rad) * self.speed
         target_velocity_y = math.cos(heading_rad) * self.speed
@@ -81,8 +80,6 @@ class VehicleState:
         self.velocity_x += (target_velocity_x - self.velocity_x) * momentum_lag
         self.velocity_y += (target_velocity_y - self.velocity_y) * momentum_lag
 
-        # --- direction_of_travel reflects where the vehicle is actually
-        # moving, which can now differ from heading ---
         if self.velocity_x != 0.0 or self.velocity_y != 0.0:
             self.direction_of_travel = math.degrees(
                 math.atan2(self.velocity_x, -self.velocity_y)
@@ -91,13 +88,6 @@ class VehicleState:
         self.x += self.velocity_x
         self.y += self.velocity_y
 
-        # --- NEW (Milestone 4a): boundary collision ---
-        # Vehicle is treated as a point (center position only) for this
-        # first pass — not yet accounting for the rendered dot's radius.
-        # On any contact, clamp position to the boundary edge and bring
-        # the vehicle to a full stop (speed and both velocity components
-        # zeroed), matching the milestone's own success-criterion wording:
-        # "the vehicle stops or is blocked."
         hit_wall = False
 
         if self.x < ARENA_MIN_X:
