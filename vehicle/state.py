@@ -10,9 +10,9 @@ REFLEX_14_WIDTH_INCHES = 7.95  # real vehicle width, per Team Associated spec (2
 # of the system — no dt/real-time integration yet). Plain module-level
 # constants for now; per charter section 12a these get consolidated into a
 # config table later, once there are enough of them to justify it.
-ACCELERATION = 0.08   # speed gained per frame at full throttle
+ACCELERATION = 0.12   # speed gained per frame at full throttle
 FRICTION = 0.02        # fraction of speed lost per frame when coasting
-TOP_SPEED = 4.0        # max magnitude of speed in either direction
+TOP_SPEED = 6.0        # max magnitude of speed in either direction
 
 # How quickly the velocity vector "catches up" to heading each frame.
 # 1.0 = velocity snaps instantly to heading (old behavior, no momentum).

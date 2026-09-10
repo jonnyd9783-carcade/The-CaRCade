@@ -6,17 +6,13 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 YELLOW = (255, 220, 0)  # direction-of-travel line color, distinct from heading (white)
 MAGENTA = (255, 0, 255)  # simulated sensor reading marker, distinct from vehicle dot
+GREEN = (50, 255, 50)  # estimated position marker, distinct from measured/truth
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 ARENA_MARGIN = 40
 
-# Used only to offset the heading/direction-of-travel line start points
-# from center — unrelated to the vehicle body shape below.
 DOT_RADIUS_PIXELS = round(PIXELS_PER_FOOT * (REFLEX_14_LENGTH_INCHES / 12) * 0.5)
-
-# Vehicle body dimensions, real Reflex 14 length/width converted to pixels
-# via PIXELS_PER_FOOT. Updates automatically if that calibration changes.
 VEHICLE_HALF_LENGTH_PIXELS = (PIXELS_PER_FOOT * (REFLEX_14_LENGTH_INCHES / 12)) / 2
 VEHICLE_HALF_WIDTH_PIXELS = (PIXELS_PER_FOOT * (REFLEX_14_WIDTH_INCHES / 12)) / 2
 
@@ -24,11 +20,11 @@ VEHICLE_HALF_WIDTH_PIXELS = (PIXELS_PER_FOOT * (REFLEX_14_WIDTH_INCHES / 12)) / 
 class View:
     def __init__(self):
         pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Sim Lab - Milestone 5")
+        pygame.display.set_caption("Sim Lab - Milestone 6")
         self.screen = pygame.display.get_surface()
         self.arena_rect = pygame.Rect(ARENA_MARGIN, ARENA_MARGIN, SCREEN_WIDTH - 2 * ARENA_MARGIN, SCREEN_HEIGHT - 2 * ARENA_MARGIN)
 
-    def draw(self, vehicle_state, sensor_reading=None):
+    def draw(self, vehicle_state, sensor_reading=None, estimated_state=None):
         self.screen.fill(BLACK)
         pygame.draw.rect(self.screen, WHITE, self.arena_rect, width=2)
 
@@ -55,23 +51,16 @@ class View:
                       center_y + travel_dir_y * (dot_radius + line_length))
         pygame.draw.line(self.screen, YELLOW, travel_start, travel_end, width=2)
 
-        # --- Vehicle body, drawn as a rectangle rotated to heading ---
-        # Uses the same sin/-cos convention already established for the
-        # heading/travel lines, so rotation direction stays consistent
-        # with the rest of the rendering (deliberately re-derived, not
-        # a generic rotation matrix, to avoid a repeat of tonight's
-        # atan2 sign mismatch).
         sin_h = math.sin(heading_rad)
         cos_h = math.cos(heading_rad)
         hl = VEHICLE_HALF_LENGTH_PIXELS
         hw = VEHICLE_HALF_WIDTH_PIXELS
 
-        # (f, r) = (forward offset, right offset) for each corner
         corners_local = [
-            (hl, -hw),   # front-left
-            (hl, hw),    # front-right
-            (-hl, hw),   # rear-right
-            (-hl, -hw),  # rear-left
+            (hl, -hw),
+            (hl, hw),
+            (-hl, hw),
+            (-hl, -hw),
         ]
         corners_world = [
             (center_x + f * sin_h + r * cos_h, center_y - f * cos_h + r * sin_h)
@@ -82,5 +71,10 @@ class View:
         if sensor_reading is not None:
             reading_point = (int(sensor_reading.x), int(sensor_reading.y))
             pygame.draw.circle(self.screen, MAGENTA, reading_point, dot_radius - 1, width=2)
+
+        # --- NEW (Milestone 6): estimated position, hollow green circle ---
+        if estimated_state is not None:
+            estimate_point = (int(estimated_state.x), int(estimated_state.y))
+            pygame.draw.circle(self.screen, GREEN, estimate_point, dot_radius - 1, width=2)
 
         pygame.display.flip()
