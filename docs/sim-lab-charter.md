@@ -729,7 +729,6 @@ Build only what is needed to answer the current question while keeping the archi
 Use these as a rough roadmap, not a rigid schedule.
 
 **Milestone 0 — First Contact**
-
 - MacBook development environment
 - Python
 - Pygame
@@ -793,6 +792,8 @@ Introduce an estimator such as an EKF if the experiment demonstrates the need.
 Success criterion: Estimated state can be compared against known simulation truth.
 
 **Amendment (post-Milestone 6):** A simple predict-correct blended estimator was built, deliberately not an EKF, per this section's own instruction not to add one before a demonstrated need. Gain testing (0.05/0.3/0.5) confirmed the estimator behaves as a genuine trust-weighted blend, not degenerate at either extreme — even near-zero gain retains a residual correction, consistent with the underlying math. **Important, explicitly-confirmed limitation:** because the predict step uses this simulation's own deterministic physics (the same model that generates ground truth), the estimator's apparent accuracy is not representative of real-hardware performance. The trigger for upgrading to an EKF-style estimator is a demonstrated accuracy gap once real UWB data exists (Milestone 10) — not the mere existence of real data.
+
+**Amendment (post-wheelbase-steering, pre-Milestone-7):** Wheelbase-aware steering was implemented as bicycle-model kinematics, the smallest model that makes turning both speed-dependent and geometrically bounded — satisfying the real future need identified back at Milestone 4 (avoidance-maneuver realism) without adding full tire-slip dynamics, which remains explicitly deferred (see Milestone 4's amendment). Two real vehicle parameters were required: wheelbase (confirmed via manufacturer spec) and max steering angle (no manufacturer spec exists; treated as an explicit placeholder per `fleet-hardware.md`'s established pattern for unverified assumptions). Reverse-steering was made to correctly invert relative to forward, matching real Ackermann-steering physics — verified via numeric simulation before shipping, continuing this project's practice of not trusting sign-convention changes without independent verification (per the direction-of-travel sign bug earlier in Milestone 4).
 
 **Milestone 7 — Safety Experiments**
 
