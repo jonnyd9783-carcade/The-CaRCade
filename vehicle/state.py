@@ -4,30 +4,26 @@ import math
 PIXELS_PER_FOOT = 28.8  # calibrated: 720px usable arena width = 25ft real-world width
 REFLEX_14_LENGTH_INCHES = 11.97  # real vehicle length, per Team Associated spec (304mm)
 REFLEX_14_WIDTH_INCHES = 7.95  # real vehicle width, per Team Associated spec (202mm)
+WHEELBASE_INCHES = 7.42  # confirmed real spec (188.5mm), Team Associated dealer portal, Reflex 14B RTR
+
+# PLACEHOLDER — no published spec exists for the Reflex 14's max wheel
+# throw (manufacturers rarely publish this; it's often adjustable via
+# the steering rack). Estimated from typical off-road-buggy range
+# (30-40°), then tuned down further by feel to avoid unrealistically
+# fast spin rates when combined with TOP_SPEED. Flagged as an
+# unverified assumption in fleet-hardware.md — revisit once real
+# hardware can be measured directly.
+MAX_STEERING_ANGLE_DEGREES = 15
+
+WHEELBASE_PIXELS = PIXELS_PER_FOOT * (WHEELBASE_INCHES / 12)
 
 # --- Physics tuning constants (Milestone 4) ---
-# Per-frame constants, tuned assuming a fixed 60fps tick (matches the rest
-# of the system — no dt/real-time integration yet). Plain module-level
-# constants for now; per charter section 12a these get consolidated into a
-# config table later, once there are enough of them to justify it.
 ACCELERATION = 0.12   # speed gained per frame at full throttle
 FRICTION = 0.02        # fraction of speed lost per frame when coasting
 TOP_SPEED = 6.0        # max magnitude of speed in either direction
-
-# How quickly the velocity vector "catches up" to heading each frame.
-# 1.0 = velocity snaps instantly to heading (old behavior, no momentum).
-# Lower values = more lag/drift — direction of travel visibly trails heading
-# during sharp turns or speed changes. This is what makes the direction-of-
-# travel line meaningfully different from the orientation line.
-MOMENTUM_LAG = 0.15
+MOMENTUM_LAG = 0.25
 
 # --- Arena boundary constants (Milestone 4a) ---
-# These MUST currently match render/view.py's SCREEN_WIDTH, SCREEN_HEIGHT,
-# and ARENA_MARGIN by hand — there is no shared config yet. If the arena
-# size ever changes in view.py, these need to be updated here too. This
-# duplication is a known, deliberate simplification; a good candidate for
-# the deferred consolidated config table (section 12a), not worth solving
-# now for a single set of four numbers.
 ARENA_MIN_X = 40
 ARENA_MAX_X = 760
 ARENA_MIN_Y = 40
@@ -39,7 +35,7 @@ class VehicleState:
     x: float = 400.0
     y: float = 300.0
     heading: float = 0.0
-    direction_of_travel: float = 0.0  # angle of actual velocity vector, degrees
+    direction_of_travel: float = 0.0
     speed: float = 0.0
     current_steering: float = 0.0
     current_throttle: float = 0.0
@@ -47,9 +43,11 @@ class VehicleState:
     velocity_y: float = 0.0
 
     def apply_input(self, steering, throttle, steering_deadzone=0.12, throttle_deadzone=0.12,
-                     ramp_rate=0.15, turn_rate=3.0,
+                     ramp_rate=0.15,
                      acceleration=ACCELERATION, friction=FRICTION, top_speed=TOP_SPEED,
-                     momentum_lag=MOMENTUM_LAG):
+                     momentum_lag=MOMENTUM_LAG,
+                     wheelbase_pixels=WHEELBASE_PIXELS,
+                     max_steering_angle_degrees=MAX_STEERING_ANGLE_DEGREES):
         if abs(steering) < steering_deadzone:
             steering = 0.0
         if abs(throttle) < throttle_deadzone:
@@ -63,8 +61,9 @@ class VehicleState:
         s = (s ** 2) * (1 if s >= 0 else -1)
         t = (t ** 2) * (1 if t >= 0 else -1)
 
-        self.heading += s * turn_rate
-
+        # --- Speed: accelerates from throttle, decays from friction ---
+        # Computed before the heading update below, since wheelbase-aware
+        # steering needs this frame's finalized speed, not last frame's.
         self.speed += t * acceleration
         self.speed -= self.speed * friction
 
@@ -73,6 +72,32 @@ class VehicleState:
         elif self.speed < -top_speed:
             self.speed = -top_speed
 
+        # --- Wheelbase-aware steering (Milestone 7 prerequisite) ---
+        # Bicycle-model kinematics: steering angle + wheelbase determine
+        # a turning radius; yaw rate = forward_speed / turning_radius.
+        # Rearranged algebraically to angular_velocity = speed * tan(angle)
+        # / wheelbase, avoiding a division by tan(angle) — the original
+        # form could hit a ZeroDivisionError when tan() rounds to exactly
+        # 0.0 for a very small nonzero angle (happens after steering
+        # decays toward zero over many frames of straight driving).
+        steering_angle_degrees = s * max_steering_angle_degrees
+        steering_angle_degrees = max(-max_steering_angle_degrees,
+                                      min(max_steering_angle_degrees, steering_angle_degrees))
+
+        steering_angle_rad = math.radians(steering_angle_degrees)
+
+        # This codebase's established convention: forward driving
+        # corresponds to NEGATIVE self.speed (confirmed via mapping.py's
+        # axis_1 pass-through, Milestone 4). Flip sign so "forward speed"
+        # is positive during forward driving — without this, steering
+        # feel would invert during normal forward driving, not just
+        # reverse.
+        effective_forward_speed = -self.speed
+        angular_velocity_rad_per_frame = (effective_forward_speed * math.tan(steering_angle_rad)) / wheelbase_pixels
+        self.heading += math.degrees(angular_velocity_rad_per_frame)
+
+        # --- Velocity vector has momentum — it chases the heading-derived
+        # target direction rather than snapping to it instantly ---
         heading_rad = math.radians(self.heading)
         target_velocity_x = -math.sin(heading_rad) * self.speed
         target_velocity_y = math.cos(heading_rad) * self.speed
