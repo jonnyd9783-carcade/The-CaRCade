@@ -10,6 +10,7 @@ from input.mapping import map_keyboard_input
 from telemetry import Telemetry
 from sensors.simulated_position import SimulatedPositionSensor
 from estimation.position_estimator import PositionEstimator
+from safety.collision_check import check_boundary_ttc
 
 pygame.init()
 pygame.display.set_mode((800, 600))
@@ -72,6 +73,14 @@ while running:
             print("First input detected, telemetry recording started.")
 
     vehicle.apply_input(command.steering, command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
+
+    # --- Milestone 7, Step A: detection only, does not modify command yet ---
+    safety_check = check_boundary_ttc(vehicle)
+    if safety_check and safety_check["would_intervene"]:
+        print(f"[SAFETY] would intervene: {safety_check['wall']} wall, "
+              f"incidence={safety_check['incidence_degrees']:.1f}°, "
+              f"raw_ttc={safety_check['raw_ttc_frames']:.1f}f, "
+              f"rotate_time={safety_check['time_to_rotate_frames']:.1f}f")
 
     sensor_reading = position_sensor.read()
     estimated_state = estimator.update(vehicle.velocity_x, vehicle.velocity_y, sensor_reading.x, sensor_reading.y)
