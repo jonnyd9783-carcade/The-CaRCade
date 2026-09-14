@@ -23,6 +23,14 @@ FRICTION = 0.02        # fraction of speed lost per frame when coasting
 TOP_SPEED = 6.0        # max magnitude of speed in either direction
 MOMENTUM_LAG = 0.25
 
+# PLACEHOLDER — active braking deceleration (Milestone 7 prerequisite).
+# Applied only when throttle command opposes current motion direction
+# (e.g. reverse throttle while still moving forward) — mechanically
+# distinct from normal acceleration in the same direction as current
+# motion, or from rest. Rough starting guess (~2.5x ACCELERATION);
+# tune by feel once real driving/intervention data exists.
+BRAKE_DECELERATION = 0.3
+
 # --- Arena boundary constants (Milestone 4a) ---
 ARENA_MIN_X = 40
 ARENA_MAX_X = 760
@@ -45,6 +53,7 @@ class VehicleState:
     def apply_input(self, steering, throttle, steering_deadzone=0.12, throttle_deadzone=0.12,
                      ramp_rate=0.15,
                      acceleration=ACCELERATION, friction=FRICTION, top_speed=TOP_SPEED,
+                     brake_deceleration=BRAKE_DECELERATION,
                      momentum_lag=MOMENTUM_LAG,
                      wheelbase_pixels=WHEELBASE_PIXELS,
                      max_steering_angle_degrees=MAX_STEERING_ANGLE_DEGREES):
@@ -62,9 +71,22 @@ class VehicleState:
         t = (t ** 2) * (1 if t >= 0 else -1)
 
         # --- Speed: accelerates from throttle, decays from friction ---
-        # Computed before the heading update below, since wheelbase-aware
-        # steering needs this frame's finalized speed, not last frame's.
-        self.speed += t * acceleration
+        # Braking (Milestone 7 prerequisite): if the throttle command
+        # opposes current motion direction (driver actively fighting
+        # existing momentum), use the stronger BRAKE_DECELERATION
+        # instead of normal ACCELERATION. Same-direction driving, or
+        # starting from rest in either direction, still uses ACCELERATION
+        # — this is a real mechanical distinction, not just a stronger
+        # version of normal driving. No extra state needed: as speed
+        # crosses zero while braking, this same sign comparison
+        # naturally reverts to ACCELERATION once actually moving in the
+        # new direction — brake-to-stop-then-reverse falls out for free.
+        is_braking = (t > 0 and self.speed < 0) or (t < 0 and self.speed > 0)
+        if is_braking:
+            self.speed += t * brake_deceleration
+        else:
+            self.speed += t * acceleration
+
         self.speed -= self.speed * friction
 
         if self.speed > top_speed:
@@ -73,25 +95,11 @@ class VehicleState:
             self.speed = -top_speed
 
         # --- Wheelbase-aware steering (Milestone 7 prerequisite) ---
-        # Bicycle-model kinematics: steering angle + wheelbase determine
-        # a turning radius; yaw rate = forward_speed / turning_radius.
-        # Rearranged algebraically to angular_velocity = speed * tan(angle)
-        # / wheelbase, avoiding a division by tan(angle) — the original
-        # form could hit a ZeroDivisionError when tan() rounds to exactly
-        # 0.0 for a very small nonzero angle (happens after steering
-        # decays toward zero over many frames of straight driving).
         steering_angle_degrees = s * max_steering_angle_degrees
         steering_angle_degrees = max(-max_steering_angle_degrees,
                                       min(max_steering_angle_degrees, steering_angle_degrees))
 
         steering_angle_rad = math.radians(steering_angle_degrees)
-
-        # This codebase's established convention: forward driving
-        # corresponds to NEGATIVE self.speed (confirmed via mapping.py's
-        # axis_1 pass-through, Milestone 4). Flip sign so "forward speed"
-        # is positive during forward driving — without this, steering
-        # feel would invert during normal forward driving, not just
-        # reverse.
         effective_forward_speed = -self.speed
         angular_velocity_rad_per_frame = (effective_forward_speed * math.tan(steering_angle_rad)) / wheelbase_pixels
         self.heading += math.degrees(angular_velocity_rad_per_frame)
