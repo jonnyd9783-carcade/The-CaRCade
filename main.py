@@ -11,6 +11,21 @@ from telemetry import Telemetry
 from sensors.simulated_position import SimulatedPositionSensor
 from estimation.position_estimator import PositionEstimator
 from safety.intervention import SafetyIntervention
+from safety.head_on_only import HeadOnOnlyIntervention
+
+STRATEGIES = {
+    "brake_and_steer": SafetyIntervention,
+    "head_on_only": HeadOnOnlyIntervention,
+}
+
+strategy_name = "brake_and_steer"
+for i, arg in enumerate(sys.argv):
+    if arg == "--strategy" and i + 1 < len(sys.argv):
+        strategy_name = sys.argv[i + 1]
+
+if strategy_name not in STRATEGIES:
+    print(f"Unknown strategy '{strategy_name}', defaulting to brake_and_steer")
+    strategy_name = "brake_and_steer"
 
 pygame.init()
 pygame.display.set_mode((800, 600))
@@ -19,7 +34,8 @@ view = View()
 vehicle = VehicleState()
 position_sensor = SimulatedPositionSensor(vehicle)
 estimator = PositionEstimator(vehicle.x, vehicle.y)
-safety_system = SafetyIntervention()
+safety_system = STRATEGIES[strategy_name]()
+print(f"Using safety strategy: {strategy_name}")
 telemetry = Telemetry()
 recording_started = False
 
@@ -73,10 +89,9 @@ while running:
             recording_started = True
             print("First input detected, telemetry recording started.")
 
-    # --- Milestone 7, Step B: safety may override the player's command ---
     final_command, intervening = safety_system.update(vehicle, command)
     if intervening:
-        print(f"[SAFETY] intervening: phase={safety_system.phase}")
+        print(f"[SAFETY] intervening: phase={getattr(safety_system, 'phase', 'active')}")
 
     vehicle.apply_input(final_command.steering, final_command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
