@@ -91,7 +91,7 @@ while running:
 
     final_command, intervening = safety_system.update(vehicle, command)
     if intervening:
-        print(f"[SAFETY] intervening: phase={getattr(safety_system, 'phase', 'active')}")
+        print(f"[SAFETY] intervening: status={safety_system.status}")
 
     vehicle.apply_input(final_command.steering, final_command.throttle, steering_deadzone=steering_deadzone, throttle_deadzone=throttle_deadzone)
 
@@ -99,7 +99,7 @@ while running:
     estimated_state = estimator.update(vehicle.velocity_x, vehicle.velocity_y, sensor_reading.x, sensor_reading.y)
 
     if recording_started:
-        telemetry.record(vehicle, final_command, sensor_reading, estimated_state)
+        telemetry.record(vehicle, command, final_command, sensor_reading, estimated_state)
 
     view.draw(vehicle, sensor_reading, estimated_state)
 

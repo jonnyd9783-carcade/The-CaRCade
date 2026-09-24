@@ -39,6 +39,12 @@ intervention.py) — this strategy is inherently self-releasing, since
 both conditions are re-evaluated fresh every single frame rather than
 committing to a multi-frame maneuver.
 
+`self.status` mirrors intervention.py's `status` property under the
+same shared name, so main.py (and telemetry) can report what any
+strategy is doing without needing to know its internal structure. Since
+this strategy has no phases, status just reflects which trigger(s), if
+any, are currently active this frame.
+
 Reuses check_boundary_ttc() purely for its raw geometry output (wall,
 distance, raw_ttc, incidence) — deliberately ignores its
 "would_intervene" field, which reflects STRATEGY 1's own timing logic,
@@ -65,6 +71,7 @@ class InterventionCommand:
 class HeadOnOnlyIntervention:
     def __init__(self):
         self.steer_sign = 0
+        self.status = "idle"
 
     def update(self, vehicle, player_command):
         check = check_boundary_ttc(vehicle)
@@ -78,6 +85,15 @@ class HeadOnOnlyIntervention:
                 self.steer_sign = choose_steer_sign(vehicle)
             if check["raw_ttc_frames"] < EMERGENCY_BRAKE_TTC_FRAMES:
                 braking_active = True
+
+        if steering_active and braking_active:
+            self.status = "steering+braking"
+        elif steering_active:
+            self.status = "steering"
+        elif braking_active:
+            self.status = "braking"
+        else:
+            self.status = "idle"
 
         if not steering_active and not braking_active:
             return player_command, False

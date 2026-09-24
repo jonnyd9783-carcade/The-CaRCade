@@ -56,12 +56,17 @@ whether to trigger in the first place) at any point during either
 phase, the intervention ends immediately and hands back full control.
 
 STEER_INTERVENTION_MAGNITUDE: steering strength during the steering
-phase is now a tunable 0-1 scale, not hardcoded to full lock. Since the
+phase is a tunable 0-1 scale, not hardcoded to full lock. Since the
 steering phase's exit is live (keeps steering until incidence actually
 drops below SAFE_INCIDENCE_DEGREES, not a fixed duration), reducing this
 just means slower rotation taking more frames to complete — the system
 naturally compensates. At very low values, watch for the MAX_STEER_FRAMES
 safety ceiling cutting off an incomplete turn before it finishes.
+
+`status` property exposes `self.phase` under a name shared with
+head_on_only.py's own status tracking, so main.py (and telemetry) can
+report what any strategy is doing without needing to know its internal
+structure.
 
 BRAKE_DURATION_FRAMES lives in collision_check.py, not here — it's a
 timing input to the trigger-condition calculation there, not just a
@@ -140,6 +145,10 @@ class SafetyIntervention:
         self.steer_sign = 0
         self.target_wall = None
         self.steer_frame_count = 0  # safety-ceiling counter during "steering"
+
+    @property
+    def status(self):
+        return self.phase
 
     def update(self, vehicle, player_command):
         """
