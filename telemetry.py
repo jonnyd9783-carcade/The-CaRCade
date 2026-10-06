@@ -13,13 +13,16 @@ class Telemetry:
         header_row = [
             "timestamp", "x", "y", "heading", "direction_of_travel",
             "velocity_x", "velocity_y",
-            "steering_input", "throttle_input",
+            "steering_input_raw", "throttle_input_raw",
+            "steering_input_applied", "throttle_input_applied",
+            "safety_active", "safety_phase",
             "sensor_x", "sensor_y", "estimated_x", "estimated_y",
         ]
         self.writer.writerow(header_row)
         print("Recording telemetry to: " + filepath)
 
-    def record(self, vehicle_state, command, sensor_reading=None, estimated_state=None):
+    def record(self, vehicle_state, raw_command, applied_command, safety_active, safety_phase,
+               sensor_reading=None, estimated_state=None):
         row = [
             time.time(),
             vehicle_state.x,
@@ -28,8 +31,12 @@ class Telemetry:
             vehicle_state.direction_of_travel,
             vehicle_state.velocity_x,
             vehicle_state.velocity_y,
-            command.steering,
-            command.throttle,
+            raw_command.steering,
+            raw_command.throttle,
+            applied_command.steering,
+            applied_command.throttle,
+            1 if safety_active else 0,
+            safety_phase,
             sensor_reading.x if sensor_reading is not None else "",
             sensor_reading.y if sensor_reading is not None else "",
             estimated_state.x if estimated_state is not None else "",

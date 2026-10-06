@@ -36,17 +36,15 @@ require input to clearly exceed MATCHING_INPUT_THRESHOLD, not noise.
 CORNER BUG, found via live testing, now fixed: the original steering
 logic picked a direction parallel to whichever SINGLE wall triggered
 detection, with no awareness that a second, adjacent wall might also
-be close (a corner). This could steer the vehicle away from one wall
-directly into the other. Fix: steering direction is now chosen by
-aiming toward the ARENA CENTER, not parallel to one specific wall.
-Center-seeking naturally reduces closing velocity toward ALL nearby
-walls at once, not just the one that happened to trigger — validated
-via numeric simulation across all four corners, both forward and
-reverse, plus the plain single-wall case, before being written here.
-This also happens to resolve the earlier "arena-specific, not general"
-limitation: aiming at a center point (or more generally, away from the
-nearest boundary point) generalizes far better to non-rectangular
-geometry than hardcoded per-wall candidate headings ever could.
+be close (a corner). Fix: steering direction aims toward the ARENA
+CENTER, which naturally reduces closing velocity toward ALL nearby
+walls at once. That logic now lives in safety/steering_geometry.py,
+shared with the other strategy, rather than a private copy here.
+
+REVERSE BUG, found via live testing, now fixed in steering_geometry.py:
+the center-seeking logic rotated the vehicle's nose toward center,
+which is only correct moving forward. In reverse it turned the
+direction of travel away from center. See steering_geometry.py.
 
 Speed-based early exit, found via live testing: intervention could
 keep running (braking or steering) even after speed had already dropped
@@ -75,17 +73,13 @@ the constant in two places.
 """
 
 from dataclasses import dataclass
-from vehicle.state import ARENA_MIN_X, ARENA_MAX_X, ARENA_MIN_Y, ARENA_MAX_Y
 from safety.collision_check import (
     check_boundary_ttc,
     compute_incidence_degrees,
     BRAKE_DURATION_FRAMES,
     MIN_CLOSING_SPEED_FOR_INTERVENTION,
 )
-import math
-
-ARENA_CENTER_X = (ARENA_MIN_X + ARENA_MAX_X) / 2
-ARENA_CENTER_Y = (ARENA_MIN_Y + ARENA_MAX_Y) / 2
+from safety.steering_geometry import choose_steer_sign
 
 # --- Placeholder tuning constants, minimal starting point ---
 BRAKE_THROTTLE_MAGNITUDE = 0.5     # half-strength brake command, not a full slam
@@ -93,32 +87,6 @@ STEER_INTERVENTION_MAGNITUDE = 1.0  # 0-1 scale; 1.0 = full lock (original behav
 SAFE_INCIDENCE_DEGREES = 30          # steering phase exits once incidence drops below this
 MAX_STEER_FRAMES = 90                # defensive ceiling only — should rarely if ever be hit
 MATCHING_INPUT_THRESHOLD = 0.2       # player input must clearly exceed this to count as "matching", not noise
-
-
-def _shortest_signed_angle_diff(target, current):
-    return (target - current + 180) % 360 - 180
-
-
-def _choose_steer_sign(vehicle):
-    """
-    Picks +1 or -1 steering command to rotate heading toward the arena
-    center, accounting for the fact that steering's rotational effect
-    flips sign depending on current forward/reverse motion (confirmed
-    behavior from wheelbase-aware steering work). Aiming at center
-    (rather than parallel to whichever single wall triggered detection)
-    naturally handles corners: it reduces closing velocity toward ALL
-    nearby walls at once, not just one — see module docstring.
-    """
-    dx = ARENA_CENTER_X - vehicle.x
-    dy = ARENA_CENTER_Y - vehicle.y
-    target_heading = math.degrees(math.atan2(dx, -dy))
-
-    heading_mod = vehicle.heading % 360
-    diff = _shortest_signed_angle_diff(target_heading, heading_mod)
-    desired_heading_change_sign = 1 if diff > 0 else -1
-
-    effective_forward_speed_sign = 1 if -vehicle.speed > 0 else -1
-    return desired_heading_change_sign * effective_forward_speed_sign
 
 
 def _matches_direction(player_value, commanded_sign):
@@ -161,7 +129,7 @@ class SafetyIntervention:
                 self.phase = "braking"
                 self.frames_remaining = BRAKE_DURATION_FRAMES
                 self.brake_throttle_sign = -1 if vehicle.speed < 0 else 1
-                self.steer_sign = _choose_steer_sign(vehicle)
+                self.steer_sign = choose_steer_sign(vehicle)
                 self.target_wall = check["wall"]
             else:
                 return player_command, False

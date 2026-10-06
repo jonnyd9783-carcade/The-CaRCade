@@ -99,7 +99,7 @@ while running:
     estimated_state = estimator.update(vehicle.velocity_x, vehicle.velocity_y, sensor_reading.x, sensor_reading.y)
 
     if recording_started:
-        telemetry.record(vehicle, command, final_command, sensor_reading, estimated_state)
+        telemetry.record(vehicle, command, final_command, intervening, safety_system.status, sensor_reading, estimated_state)
 
     view.draw(vehicle, sensor_reading, estimated_state)
 
