@@ -128,7 +128,7 @@ class SafetyIntervention:
             if check and check["would_intervene"]:
                 self.phase = "braking"
                 self.frames_remaining = BRAKE_DURATION_FRAMES
-                self.brake_throttle_sign = -1 if vehicle.speed < 0 else 1
+                self.brake_throttle_sign = 1 if vehicle.speed < 0 else -1
                 self.steer_sign = choose_steer_sign(vehicle)
                 self.target_wall = check["wall"]
             else:

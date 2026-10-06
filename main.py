@@ -36,7 +36,7 @@ position_sensor = SimulatedPositionSensor(vehicle)
 estimator = PositionEstimator(vehicle.x, vehicle.y)
 safety_system = STRATEGIES[strategy_name]()
 print(f"Using safety strategy: {strategy_name}")
-telemetry = Telemetry()
+telemetry = Telemetry(prefix=f"run_{strategy_name}")
 recording_started = False
 
 input_source = None
@@ -99,7 +99,7 @@ while running:
     estimated_state = estimator.update(vehicle.velocity_x, vehicle.velocity_y, sensor_reading.x, sensor_reading.y)
 
     if recording_started:
-        telemetry.record(vehicle, command, final_command, intervening, safety_system.status, sensor_reading, estimated_state)
+        telemetry.record(vehicle, command, final_command, intervening, safety_system.status, sensor_reading, estimated_state, steering_deadzone, throttle_deadzone)
 
     view.draw(vehicle, sensor_reading, estimated_state)
 

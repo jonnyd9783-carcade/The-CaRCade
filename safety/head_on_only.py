@@ -32,6 +32,14 @@ separate from collision_check.py's shared constant so strategy 1's
 behavior stays completely unaffected — keeps the two strategies
 properly independent and separately tunable.
 
+BRAKE SIGN BUG, found via replay data, now fixed: brake_sign used to be
+the SAME sign as the vehicle's motion (-1 when speed < 0, else +1).
+vehicle/state.py's apply_input only treats a throttle as braking when it
+OPPOSES the motion, so the "emergency brake" was really a push to keep
+going: in the replay data, applied throttle (+1.0) matched the player's
+own throttle (+1.01) during the brake. The sign now opposes the motion
+(forward is negative speed, so braking is positive throttle).
+
 Each axis only overrides itself when its own condition is active;
 otherwise the player's own input passes through untouched on that
 axis. No player-match or speed-based early-exit logic here (unlike
@@ -101,7 +109,9 @@ class HeadOnOnlyIntervention:
         final_steering = self.steer_sign * STEER_MAGNITUDE if steering_active else player_command.steering
 
         if braking_active:
-            brake_sign = -1 if vehicle.speed < 0 else 1
+            # Braking = throttle OPPOSING motion. Forward is negative
+            # speed, so a forward-moving car brakes with positive throttle.
+            brake_sign = 1 if vehicle.speed < 0 else -1
             final_throttle = brake_sign * EMERGENCY_BRAKE_MAGNITUDE
         else:
             final_throttle = player_command.throttle

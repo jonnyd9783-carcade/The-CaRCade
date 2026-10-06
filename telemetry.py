@@ -3,10 +3,10 @@ import time
 import os
 
 class Telemetry:
-    def __init__(self, folder="telemetry_runs"):
+    def __init__(self, folder="telemetry_runs", prefix="run"):
         os.makedirs(folder, exist_ok=True)
         timestamp_str = time.strftime("%Y-%m-%d_%H%M%S")
-        filepath = os.path.join(folder, "run_" + timestamp_str + ".csv")
+        filepath = os.path.join(folder, prefix + "_" + timestamp_str + ".csv")
 
         self.file = open(filepath, "w", newline="")
         self.writer = csv.writer(self.file)
@@ -17,12 +17,14 @@ class Telemetry:
             "steering_input_applied", "throttle_input_applied",
             "safety_active", "safety_phase",
             "sensor_x", "sensor_y", "estimated_x", "estimated_y",
+            "steering_deadzone", "throttle_deadzone",
         ]
         self.writer.writerow(header_row)
         print("Recording telemetry to: " + filepath)
 
     def record(self, vehicle_state, raw_command, applied_command, safety_active, safety_phase,
-               sensor_reading=None, estimated_state=None):
+               sensor_reading=None, estimated_state=None,
+               steering_deadzone=None, throttle_deadzone=None):
         row = [
             time.time(),
             vehicle_state.x,
@@ -41,6 +43,8 @@ class Telemetry:
             sensor_reading.y if sensor_reading is not None else "",
             estimated_state.x if estimated_state is not None else "",
             estimated_state.y if estimated_state is not None else "",
+            steering_deadzone if steering_deadzone is not None else "",
+            throttle_deadzone if throttle_deadzone is not None else "",
         ]
         self.writer.writerow(row)
 

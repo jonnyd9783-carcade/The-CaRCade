@@ -122,22 +122,37 @@ class VehicleState:
         self.y += self.velocity_y
 
         hit_wall = False
+        hit_walls = []
 
         if self.x < ARENA_MIN_X:
             self.x = ARENA_MIN_X
             hit_wall = True
+            hit_walls.append("left")
         elif self.x > ARENA_MAX_X:
             self.x = ARENA_MAX_X
             hit_wall = True
+            hit_walls.append("right")
 
         if self.y < ARENA_MIN_Y:
             self.y = ARENA_MIN_Y
             hit_wall = True
+            hit_walls.append("top")
         elif self.y > ARENA_MAX_Y:
             self.y = ARENA_MAX_Y
             hit_wall = True
+            hit_walls.append("bottom")
 
+        # Impact record (additive, no behavior change): the velocity that
+        # carried the vehicle into the wall, captured before the full stop
+        # below zeroes it. Read by strategy_replay.py's impact summary.
+        self.impact = None
         if hit_wall:
+            self.impact = {
+                "walls": hit_walls,
+                "velocity_x": self.velocity_x,
+                "velocity_y": self.velocity_y,
+                "heading": self.heading,
+            }
             self.speed = 0.0
             self.velocity_x = 0.0
             self.velocity_y = 0.0
