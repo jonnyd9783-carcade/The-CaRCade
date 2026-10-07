@@ -16,8 +16,11 @@ Reproduce the golden check:
 
     python3 strategy_replay.py samples/05_golden_run.csv
 
-Reproduce the original run exactly:
+Replay the original recording under the current code. This gives the file 04 result
+(209 intervention frames, ends at (485, 560)), not the original 175 / (760, 437),
+because the original was driven under the brake sign bug. File 03 preserves that behavior:
 
     python3 strategy_replay.py samples/01_original_run.csv --steer-deadzone 0.04 --throttle-deadzone 0.045
 
-Files 02 to 04 are outputs of earlier versions of the code and cannot be regenerated.
+Files 02 and 03 are outputs of earlier versions of the code and cannot be regenerated.
+File 04 is what the current code produces from file 01.
